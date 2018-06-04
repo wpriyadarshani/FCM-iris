@@ -24,21 +24,20 @@ import math
 class Cluster(object):
     # Constructor for cluster object
     def __init__(self):
-        self.pixels = []  # intialize pixels into a list
+        self.data = []  # intialize data into a list
         self.centroid = None  # set the number of centro
         # ids to none
 
-    def addPoint(self, pixel):  # add pixels to the pixel list
-        self.pixels.append(pixel)
+    def addPoint(self, pixel):  # add data to the pixel list
+        self.data.append(pixel)
 
 
 class fcm(object):
     # __inti__ is the constructor and self refers to the current object.
-    def __init__(self, k=3, max_PCA_iterations=100, min_distance=3.0, size=150, m=2.0, epsilon=.5, max_FCM_iterations = 100):
+    def __init__(self, k=3,min_distance=3.0, size=150, m=2.0, epsilon=.5, max_FCM_iterations = 100):
         self.k = k  # initialize k clusters
 
         # intialize max_iterations
-        self.max_PCA_iterations = max_PCA_iterations
         self.max_FCM_iterations = max_FCM_iterations
 
         self.min_distance = min_distance  # intialize min_distance
@@ -48,16 +47,12 @@ class fcm(object):
         self.m = m
         self.epsilon = 0.00001
         self.max_diff = 10.0
-        self.pixels = []
+        self.data = []
         self.PCA = False
         self.Status = False
 
     # Takes in an image and performs FCM Clustering.
     def run(self):
-        # self.beta = self.calculate_beta(self.image)
-
-        print "********************************************************************"
-
         self.clusters = [None for i in range(self.k)]
         self.oldClusters = None
 
@@ -71,19 +66,19 @@ class fcm(object):
             degreelist = [num_1, num_2, num_3]
             self.degree_of_membership[i] = degreelist
 
-        randomPixels = random.sample(self.pixels, self.k)
-        print"INTIALIZE RANDOM PIXELS AS CENTROIDS"
-        print randomPixels
+        randomdata = random.sample(self.data, self.k)
+        print"INTIALIZE RANDOM data AS CENTROIDS"
+        print randomdata
         #    print"================================================================================"
         for idx in range(self.k):
             self.clusters[idx] = Cluster()
-            self.clusters[idx].centroid = randomPixels[idx]
+            self.clusters[idx].centroid = randomdata[idx]
             # if(i ==0):
         for cluster in self.clusters:
-            for pixel in self.pixels:
-                cluster.addPoint(pixel)
+            for datapoint in self.data:
+                cluster.addPoint(datapoint)
 
-        print "________", self.clusters[0].pixels[0]
+        print "________", self.clusters[0].data[0]
         iterations = 0
 
         # FCM
@@ -103,15 +98,14 @@ class fcm(object):
         return [cluster.centroid for cluster in self.clusters]
 
     def selectSingleSolution(self):
-        self.max_PCA_iterations = 10
         self.max_FCM_iterations=5
 
 
     def shouldExitFCM(self, iterations):
 
-        # if self.max_diff < self.epsilon:
-        #     print "--------------------------> max dif ", self.max_diff
-        #     return True
+        if self.max_diff < self.epsilon:
+            print "--------------------------> max dif ", self.max_diff
+            return True
 
         if iterations <= self.max_FCM_iterations:
             return False
@@ -134,7 +128,7 @@ class fcm(object):
                 pow_uij= pow(self.degree_of_membership[i][cluster], self.m)
                 sum_denominator +=pow_uij
 
-                num=[ pow_uij * self.pixels[i][0], pow_uij * self.pixels[i][1], pow_uij * self.pixels[i][2], pow_uij * self.pixels[i][3]]
+                num=[ pow_uij * self.data[i][0], pow_uij * self.data[i][1], pow_uij * self.data[i][2], pow_uij * self.data[i][3]]
 
 
                 sum_numerator[0]=sum_numerator[0] + num[0]
@@ -162,7 +156,7 @@ class fcm(object):
 
         for idx in range(self.k):
             for i in range(self.s):
-                new_uij = self.get_new_value(self.pixels[i], self.clusters[idx].centroid)
+                new_uij = self.get_new_value(self.data[i], self.clusters[idx].centroid)
                 if (i == 0):
                     print "This is the Updatedegree centroid number:", idx, self.clusters[idx].centroid
                 diff = new_uij - self.degree_of_membership[i][idx]
@@ -211,19 +205,13 @@ class fcm(object):
                 # Find the index with highest probability
             for j in range(self.k):
                 if self.degree_of_membership[i][j] == 1:
-                    # print self.pixels[i], j
-                    f.write('%s \t' %self.pixels[i] )
+                    # print self.data[i], j
+                    f.write('%s \t' %self.data[i] )
                     f.write('%d \n' %j )
 
         f.close()
 
-
-
-
-
     def I_index(self):
-
-
         result = 0;
         Ek = 0.0
         E1 = 0.0
@@ -231,7 +219,7 @@ class fcm(object):
             for j in range(self.k):
                 # print "membership ",self.degree_of_membership[i][0][j]
                 x = self.degree_of_membership[i][j]
-                y = self.calcDistance(self.pixels[i], self.clusters[j].centroid)
+                y = self.calcDistance(self.data[i], self.clusters[j].centroid)
                 mul = x * y
                 Ek += mul
 
@@ -259,98 +247,6 @@ class fcm(object):
         result = pow(result, 2.0)
         print "PB", result
         return result
-
-    def JmFunction(self):
-        # PCA 96
-        sum = 0
-
-        sum1 = 0;
-        sum2 = 0;
-
-        for j in range(self.k):
-
-
-            for i in range(self.s):
-                # print "membership ",self.degree_of_membership[i][0][j]
-                x = pow(self.degree_of_membership[i][j], self.m)
-                y = pow(self.calcDistance(self.pixels[i], self.clusters[j].centroid), 2.0)
-                mul = x * y
-                sum1 += mul
-
-        # for i in range(self.s):
-        #     for j in range(self.k):
-        #         x = self.degree_of_membership[i][j]
-        #         print "x ", x, j, i
-
-
-        for j in range(self.k):
-            eta = self.getEta(j)
-            for i in range(self.s):
-                x = self.degree_of_membership[i][j]
-                if x > 0.0:
-                    y = (x * math.log(x)) - x
-                    sum2 += y
-
-            sum2 = sum2 * eta
-
-        sum = (sum1 + sum2)
-
-
-        print "JM ", sum
-        return sum
-
-
-
-    def normalization(self):
-        for i in range(self.s):
-            max = 0.0
-            sum = 0.0
-            # Find the index with highest probability
-            for j in range(self.k):
-                sum += self.degree_of_membership[i][j]
-            # Normalize, set highest prob to 1 rest to zero
-            for j in range(self.k):
-                if sum > 0.0:
-                    self.degree_of_membership[i][j] = self.degree_of_membership[i][j]/sum
-
-            print self.degree_of_membership[i][0], self.degree_of_membership[i][1], self.degree_of_membership[i][2]
-
-
-    def getVariance(self, cluster):
-        mean=0
-
-        sum = [0.0,0.0,0.0,0.0]
-
-        no_of_pixels = 0
-        r = 2.0
-        for i in range(self.s):
-            if self.degree_of_membership[i][cluster] == 1:
-                sum[0]+=self.pixels[i][0]
-                sum[1]+=self.pixels[i][1]
-                sum[2]+=self.pixels[i][2]
-                sum[3]+=self.pixels[i][3]
-
-                no_of_pixels +=1
-
-        # calculate the mean
-        mean = [sum[0]/no_of_pixels, sum[1]/no_of_pixels, sum[2]/no_of_pixels, sum[3]/no_of_pixels]
-
-        # print "sum ", sum, no_of_pixels, mean
-
-        #calculate the variance
-
-        sum_of_distance = 0.0
-        for i in range(self.s):
-            if self.degree_of_membership[i][cluster] == 1:
-                dis = self.calcDistance(self.pixels[i], mean)
-                sum_of_distance += pow(dis,r)
-
-        x = sum_of_distance / no_of_pixels
-        var = pow(x,1.0/r)
-
-        print " -------- ", var, x, sum_of_distance
-
-        return var
 
     def DB_index(self):
 
@@ -437,34 +333,12 @@ class fcm(object):
                 if cl3 < 30:
                     sum += cl3
 
-
                 cl1 = 0
                 cl2 = 0
                 cl3 = 0
 
-                
-                
-
                 x = 0 
 
-
-            
-
-        # print "first class ", cl1, i, x
-        # print "sec class ", cl2
-        # print "third class ", cl3
-
-        # if cl1 < 40:
-        #     sum += cl1
-
-        # if cl2 < 40:
-        #     sum += cl2
-
-        # if cl3 < 40:
-        #     sum += cl3
-
-
-                
 
         accuracy =(150.0 - sum) / 150.0 
         accuracy = accuracy * 100.0
@@ -477,7 +351,7 @@ class fcm(object):
         file = open("dataset.txt","r")
 
         for i in range(self.s):
-            self.pixels.append(numpy.random.dirichlet(numpy.ones(5), size=1))
+            self.data.append(numpy.random.dirichlet(numpy.ones(5), size=1))
 
         i = 0
         for line in file:
@@ -490,19 +364,14 @@ class fcm(object):
 
             print field1, field2, field3, field4, field5
 
-            self.pixels[i] = [float(field1), float(field2), float(field3), float(field4), field5]
+            self.data[i] = [float(field1), float(field2), float(field3), float(field4), field5]
             i+=1
 
 if __name__ == "__main__":
-    # image = Image.open("Lenna.png")
     f = fcm()
     f.openIrishDataset()
 
     result = f.run()
-
-     # f.showClustering()
-
-  
 
     f.defuzzification()
     print f.DB_index()
